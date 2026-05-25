@@ -4,75 +4,234 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>世界关键矿产分布图</title>
-    <link rel="stylesheet" href="styles.css" />
+    <style>
+      :root {
+        --bg: #f6f7f4;
+        --ink: #1e2528;
+        --muted: #5d6a70;
+        --line: #d7dfdc;
+        --panel: #ffffff;
+        --ocean: #dbe9ee;
+        --land: #eef0e7;
+        --shadow: 0 14px 38px rgba(30, 37, 40, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      }
+      .wrap { width: min(1180px, calc(100% - 24px)); margin: 0 auto; }
+      header { display: flex; justify-content: space-between; gap: 16px; padding: 22px 0 14px; }
+      .eyebrow { margin: 0 0 8px; color: #44646a; font-size: 13px; font-weight: 700; }
+      h1 { margin: 0 0 10px; font-size: clamp(30px, 8vw, 56px); line-height: 1.04; letter-spacing: 0; }
+      p { margin-top: 0; }
+      .intro { max-width: 760px; color: var(--muted); font-size: 15px; line-height: 1.7; }
+      .reset {
+        width: 44px; height: 44px; flex: 0 0 auto;
+        border: 1px solid var(--line); border-radius: 8px; background: #fff;
+        color: var(--ink); font-size: 22px; box-shadow: 0 4px 14px rgba(30,37,40,.08);
+      }
+      .filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 14px; scrollbar-width: none; }
+      .filters::-webkit-scrollbar { display: none; }
+      .filter {
+        display: inline-flex; align-items: center; gap: 7px; min-height: 38px; flex: 0 0 auto;
+        border: 1px solid var(--line); border-radius: 8px; background: #fff;
+        color: var(--ink); padding: 0 12px; font: inherit; font-size: 14px; font-weight: 700;
+      }
+      .filter[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, white); }
+      .swatch {
+        width: 11px; height: 11px; border-radius: 99px; background: var(--c);
+        box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(30,37,40,.18);
+      }
+      .map-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: stretch; }
+      .map-panel { min-width: 0; border-radius: 8px; background: var(--ocean); box-shadow: var(--shadow); overflow: hidden; }
+      svg { display: block; width: 100%; height: auto; }
+      .graticule { fill: none; stroke: rgba(72,101,108,.16); stroke-width: .8; }
+      .country { fill: var(--land); stroke: #aebfb7; stroke-width: .45; }
+      .marker { cursor: pointer; }
+      .marker circle { fill: var(--c); stroke: #fff; stroke-width: 2.5; filter: drop-shadow(0 3px 4px rgba(30,37,40,.25)); }
+      .marker text {
+        opacity: 0; fill: #172024; font-size: 13px; font-weight: 800;
+        paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-width: 4px; stroke-linejoin: round;
+        pointer-events: none;
+      }
+      .marker.dim { opacity: .14; }
+      .marker.active circle { stroke: #172024; stroke-width: 4; }
+      .marker.active text, .marker:hover text { opacity: 1; }
+      .legend, .card {
+        border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+      }
+      .legend { padding: 16px; box-shadow: var(--shadow); }
+      .legend h2, .section-title h2 { margin: 0 0 12px; font-size: 20px; }
+      .legend-row {
+        display: flex; justify-content: space-between; gap: 12px;
+        border-bottom: 1px solid #edf1ef; padding: 8px 0; font-size: 14px; font-weight: 700;
+      }
+      .rank { display: flex; flex-wrap: wrap; gap: 10px 12px; margin-top: 14px; color: var(--muted); font-size: 13px; }
+      .dot { display: inline-block; border-radius: 50%; background: #6f7f83; margin-right: 6px; }
+      .large { width: 15px; height: 15px; } .medium { width: 11px; height: 11px; } .small { width: 8px; height: 8px; }
+      .section-title { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin: 22px 0 12px; }
+      .section-title p { color: var(--muted); font-size: 14px; }
+      .cards { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+      .card { border-left: 5px solid var(--c); padding: 14px; min-height: 170px; }
+      .card h3 { display: flex; justify-content: space-between; gap: 10px; margin: 0 0 10px; font-size: 18px; }
+      .tag { color: var(--muted); font-size: 12px; }
+      .card p { color: var(--muted); font-size: 13px; line-height: 1.55; }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      .chips span {
+        border: 1px solid color-mix(in srgb, var(--c) 38%, #d9e0dd); border-radius: 7px;
+        padding: 4px 7px; background: color-mix(in srgb, var(--c) 10%, #fff);
+        font-size: 12px; font-weight: 700;
+      }
+      .status { padding: 22px; color: var(--muted); font-size: 14px; }
+      footer { padding: 20px 0 28px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+      @media (max-width: 900px) {
+        .map-grid { grid-template-columns: 1fr; }
+        .legend { order: -1; }
+        .cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      }
+      @media (max-width: 640px) {
+        .wrap { width: min(100% - 20px, 1180px); }
+        header { padding-top: 18px; }
+        .intro { font-size: 14px; }
+        .marker text { font-size: 16px; }
+        .section-title { display: block; }
+        .cards { grid-template-columns: 1fr; }
+      }
+    </style>
   </head>
   <body>
-    <header class="app-header">
+    <header class="wrap">
       <div>
-        <p class="eyebrow">关键矿产 · 示意分布</p>
+        <p class="eyebrow">关键矿产 · 真实地图投影</p>
         <h1>世界关键矿产分布图</h1>
-        <p class="intro">聚合锂、钴、镍、稀土、铜、石墨、铂族金属、铀的主要生产与储量集中区域。</p>
+        <p class="intro">基于真实世界国家边界底图，按经纬度示意锂、钴、镍、稀土、铜、石墨、铂族金属、铀的主要生产与储量集中区域。</p>
       </div>
-      <button class="icon-button" id="resetView" type="button" aria-label="重置筛选">
-        <span aria-hidden="true">↺</span>
-      </button>
+      <button class="reset" id="reset" type="button" aria-label="重置筛选">↺</button>
     </header>
 
-    <main>
-      <section class="map-section" aria-label="世界关键矿产地图">
-        <div class="toolbar" id="filters" aria-label="矿种筛选"></div>
-
-        <div class="map-shell">
-          <svg class="world-map" viewBox="0 0 1000 540" role="img" aria-labelledby="mapTitle mapDesc">
-            <title id="mapTitle">世界关键矿产分布图</title>
-            <desc id="mapDesc">世界地图上以不同颜色和大小标出关键矿产的主要、重要、新兴地区。</desc>
-            <rect x="0" y="0" width="1000" height="540" rx="26" fill="#dbe9ee" />
-            <g class="grid">
-              <path d="M0 135H1000M0 270H1000M0 405H1000M250 0V540M500 0V540M750 0V540" />
-            </g>
-            <g class="land">
-              <path d="M118 118c28-44 84-72 145-67 58 5 110 38 145 83 25 32 62 52 99 69 31 15 41 54 24 82-25 40-86 25-122 45-49 27-48 91-93 119-36 22-92 13-116-25-21-33-8-75-24-111-18-41-69-51-92-89-27-45 5-100 34-146z" />
-              <path d="M388 175c35-30 91-32 132-11 39 20 66 61 62 104-5 53-50 70-72 112-19 37-8 96-47 120-39 23-88-8-103-50-14-39 8-73 6-111-2-42-37-65-39-106-1-23 19-42 61-58z" />
-              <path d="M473 91c83-54 207-53 304-20 73 25 134 79 153 147 18 62-8 126-61 162-54 36-125 22-179 55-38 23-52 75-94 87-38 11-78-19-85-58-8-43 30-73 31-114 0-53-63-69-86-116-24-50-23-108 17-143z" />
-              <path d="M682 271c48-27 102-7 132 36 29 41 39 101 10 145-30 46-93 52-132 18-38-34-41-93-34-138 4-25 9-50 24-61z" />
-              <path d="M770 423c45-18 113-10 146 24 16 16 12 37-7 47-49 25-148 22-180-18-14-18 12-41 41-53z" />
-              <path d="M436 62c30-27 74-33 106-13 20 13 10 39-18 47-42 12-89 2-88-34z" />
-            </g>
-            <g class="region-labels">
-              <text x="215" y="92">北美</text>
-              <text x="247" y="410">南美</text>
-              <text x="493" y="159">欧洲 / 非洲</text>
-              <text x="724" y="113">亚洲</text>
-              <text x="795" y="454">澳大利亚</text>
-            </g>
+    <main class="wrap">
+      <nav class="filters" id="filters" aria-label="矿种筛选"></nav>
+      <section class="map-grid">
+        <div class="map-panel">
+          <svg id="map" viewBox="0 0 1000 540" role="img" aria-label="世界关键矿产分布地图">
+            <rect width="1000" height="540" fill="#dbe9ee"></rect>
+            <g id="mapLayer"><text class="status" x="24" y="42">正在加载真实世界地图...</text></g>
             <g id="markerLayer"></g>
           </svg>
-
-          <aside class="legend" aria-label="图例">
-            <h2>图例</h2>
-            <div id="legendItems"></div>
-            <div class="rank-legend">
-              <span><i class="dot large"></i>主要</span>
-              <span><i class="dot medium"></i>重要</span>
-              <span><i class="dot small"></i>新兴</span>
-            </div>
-          </aside>
         </div>
+        <aside class="legend" aria-label="图例">
+          <h2>图例</h2>
+          <div id="legend"></div>
+          <div class="rank">
+            <span><i class="dot large"></i>主要</span>
+            <span><i class="dot medium"></i>重要</span>
+            <span><i class="dot small"></i>新兴</span>
+          </div>
+        </aside>
       </section>
-
-      <section class="detail-section" aria-label="矿产详情">
+      <section>
         <div class="section-title">
           <h2>重点区域</h2>
-          <p id="summaryText">选择矿种查看对应国家与地区。</p>
+          <p id="summary">选择矿种查看对应国家与地区。</p>
         </div>
-        <div class="cards" id="detailCards"></div>
+        <div class="cards" id="cards"></div>
       </section>
     </main>
 
-    <footer>
-      <p>注：本图为报告/教学用途的示意性分布，不替代精确 GIS 数据或最新储量统计。</p>
-    </footer>
+    <footer class="wrap">注：本图为报告/教学用途的示意性分布，底图使用真实地理数据投影，矿点为近似位置，不替代精确 GIS 数据或最新储量统计。</footer>
 
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+    <script>
+      const minerals = [
+        { id: "lithium", name: "锂", color: "#0aa99a", tag: "电池核心", note: "盐湖与硬岩锂矿并存，南美锂三角和澳大利亚是最醒目的供应区域。", countries: ["澳大利亚", "智利", "阿根廷", "玻利维亚", "中国", "津巴布韦", "葡萄牙"], points: [["澳大利亚", 134, -25, "major"], ["智利", -70, -27, "major"], ["阿根廷", -66, -34, "major"], ["玻利维亚", -64, -17, "major"], ["中国", 103, 35, "significant"], ["津巴布韦", 30, -19, "emerging"], ["葡萄牙", -8, 40, "emerging"]] },
+        { id: "cobalt", name: "钴", color: "#2368c4", tag: "电池与合金", note: "刚果民主共和国占据突出地位，印尼等镍钴共生资源近年重要性上升。", countries: ["刚果民主共和国", "印度尼西亚", "俄罗斯", "澳大利亚", "古巴", "菲律宾", "加拿大"], points: [["刚果民主共和国", 23, -3, "major"], ["印度尼西亚", 118, -2, "significant"], ["俄罗斯", 90, 60, "significant"], ["澳大利亚", 134, -25, "significant"], ["古巴", -79, 22, "emerging"], ["菲律宾", 122, 13, "emerging"], ["加拿大", -106, 57, "emerging"]] },
+        { id: "nickel", name: "镍", color: "#2f9d52", tag: "不锈钢与电池", note: "东南亚红土镍矿集中，俄罗斯、加拿大、澳大利亚仍是重要供应区。", countries: ["印度尼西亚", "菲律宾", "俄罗斯", "新喀里多尼亚", "加拿大", "澳大利亚", "巴西"], points: [["印度尼西亚", 118, -2, "major"], ["菲律宾", 122, 13, "major"], ["俄罗斯", 90, 60, "significant"], ["新喀里多尼亚", 165, -21, "significant"], ["加拿大", -106, 57, "significant"], ["澳大利亚", 134, -25, "significant"], ["巴西", -52, -10, "emerging"]] },
+        { id: "rareearths", name: "稀土", color: "#7a4ac7", tag: "磁材与高端制造", note: "中国是最重要的生产和加工中心，美国、澳大利亚、缅甸等也具有战略意义。", countries: ["中国", "美国", "澳大利亚", "缅甸", "越南", "巴西", "印度", "俄罗斯"], points: [["中国", 103, 35, "major"], ["美国", -112, 39, "significant"], ["澳大利亚", 134, -25, "significant"], ["缅甸", 96, 21, "significant"], ["越南", 106, 16, "emerging"], ["巴西", -52, -10, "emerging"], ["印度", 78, 22, "emerging"], ["俄罗斯", 90, 60, "emerging"]] },
+        { id: "copper", name: "铜", color: "#d67222", tag: "电网与电气化", note: "安第斯山脉铜带极为关键，中非铜钴带也是全球供应链核心区域。", countries: ["智利", "秘鲁", "刚果民主共和国", "赞比亚", "美国", "中国", "澳大利亚", "墨西哥"], points: [["智利", -70, -27, "major"], ["秘鲁", -75, -10, "major"], ["刚果民主共和国", 23, -3, "major"], ["赞比亚", 28, -14, "significant"], ["美国", -112, 39, "significant"], ["中国", 103, 35, "significant"], ["澳大利亚", 134, -25, "emerging"], ["墨西哥", -102, 23, "emerging"]] },
+        { id: "graphite", name: "石墨", color: "#3e4649", tag: "负极材料", note: "天然石墨资源和加工能力高度集中，中国、莫桑比克、马达加斯加等是重点区域。", countries: ["中国", "莫桑比克", "马达加斯加", "巴西", "印度", "坦桑尼亚", "加拿大"], points: [["中国", 103, 35, "major"], ["莫桑比克", 35, -18, "significant"], ["马达加斯加", 47, -20, "significant"], ["巴西", -52, -10, "significant"], ["印度", 78, 22, "emerging"], ["坦桑尼亚", 35, -6, "emerging"], ["加拿大", -106, 57, "emerging"]] },
+        { id: "pgm", name: "铂族金属", color: "#8b9aa3", tag: "催化与氢能", note: "南非布什维尔德杂岩体是全球铂族金属最关键的资源集中区。", countries: ["南非", "俄罗斯", "津巴布韦", "加拿大", "美国"], points: [["南非", 24, -29, "major"], ["俄罗斯", 90, 60, "major"], ["津巴布韦", 30, -19, "significant"], ["加拿大", -106, 57, "emerging"], ["美国", -112, 39, "emerging"]] },
+        { id: "uranium", name: "铀", color: "#a9bb2f", tag: "核能燃料", note: "哈萨克斯坦、加拿大和澳大利亚是最重要的铀资源与生产区域。", countries: ["哈萨克斯坦", "加拿大", "澳大利亚", "纳米比亚", "尼日尔", "乌兹别克斯坦", "俄罗斯"], points: [["哈萨克斯坦", 67, 48, "major"], ["加拿大", -106, 57, "major"], ["澳大利亚", 134, -25, "major"], ["纳米比亚", 17, -22, "significant"], ["尼日尔", 9, 17, "significant"], ["乌兹别克斯坦", 64, 41, "emerging"], ["俄罗斯", 90, 60, "emerging"]] }
+      ];
+
+      const rankSize = { major: 7.8, significant: 5.8, emerging: 4.6 };
+      const rankName = { major: "主要", significant: "重要", emerging: "新兴" };
+      let active = "all";
+      const filters = document.querySelector("#filters");
+      const legend = document.querySelector("#legend");
+      const markerLayer = d3.select("#markerLayer");
+      const cards = document.querySelector("#cards");
+      const summary = document.querySelector("#summary");
+      const projection = d3.geoNaturalEarth1().fitExtent([[18, 18], [982, 522]], { type: "Sphere" });
+      const path = d3.geoPath(projection);
+
+      function initControls() {
+        filters.innerHTML = `<button class="filter" data-id="all" aria-pressed="true" style="--c:#6f7f83"><span class="swatch"></span>全部</button>` +
+          minerals.map(m => `<button class="filter" data-id="${m.id}" aria-pressed="false" style="--c:${m.color}"><span class="swatch"></span>${m.name}</button>`).join("");
+        legend.innerHTML = minerals.map(m => `<div class="legend-row" style="--c:${m.color}"><span><i class="swatch"></i> ${m.name}</span><span>${m.tag}</span></div>`).join("");
+      }
+
+      function renderCards() {
+        const list = active === "all" ? minerals : minerals.filter(m => m.id === active);
+        cards.innerHTML = list.map(m => `<article class="card" style="--c:${m.color}"><h3>${m.name}<span class="tag">${m.tag}</span></h3><p>${m.note}</p><div class="chips">${m.countries.map(c => `<span>${c}</span>`).join("")}</div></article>`).join("");
+        summary.textContent = active === "all" ? "共展示 8 类关键矿产，点位大小表示区域重要程度。" : `${list[0].name}：${list[0].countries.join("、")}`;
+      }
+
+      function setActive(id) {
+        active = id;
+        document.querySelectorAll(".filter").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
+        d3.selectAll(".marker").classed("dim", d => id !== "all" && d.mineralId !== id).classed("active", d => id !== "all" && d.mineralId === id);
+        renderCards();
+      }
+
+      function renderMarkers() {
+        const points = minerals.flatMap(m => m.points.map((p, i) => ({
+          mineralId: m.id, mineral: m.name, color: m.color, country: p[0], lon: p[1], lat: p[2], rank: p[3], index: i
+        })));
+        const groups = markerLayer.selectAll("g").data(points).join("g")
+          .attr("class", "marker")
+          .attr("data-mineral", d => d.mineralId)
+          .attr("style", d => `--c:${d.color}`)
+          .attr("transform", d => `translate(${projection([d.lon, d.lat]).join(",")})`)
+          .on("click", (_, d) => {
+            setActive(d.mineralId);
+            document.querySelector(".section-title").scrollIntoView({ block: "start" });
+          });
+        groups.append("title").text(d => `${d.mineral} · ${d.country} · ${rankName[d.rank]}`);
+        groups.append("circle").attr("r", d => rankSize[d.rank]);
+        groups.append("text")
+          .attr("x", d => rankSize[d.rank] + 6)
+          .attr("y", d => d.index % 2 ? -7 : 17)
+          .text(d => d.country);
+      }
+
+      async function renderMap() {
+        const layer = d3.select("#mapLayer");
+        try {
+          const world = await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
+          const countries = topojson.feature(world, world.objects.countries);
+          layer.selectAll("*").remove();
+          layer.append("path").datum(d3.geoGraticule10()).attr("class", "graticule").attr("d", path);
+          layer.selectAll("path.country").data(countries.features).join("path").attr("class", "country").attr("d", path);
+        } catch (error) {
+          layer.select("text").text("地图数据加载失败，请检查网络后刷新。");
+          console.error(error);
+        }
+        renderMarkers();
+      }
+
+      initControls();
+      renderCards();
+      renderMap();
+      filters.addEventListener("click", e => {
+        const button = e.target.closest("button");
+        if (button) setActive(button.dataset.id);
+      });
+      document.querySelector("#reset").addEventListener("click", () => setActive("all"));
+    </script>
   </body>
 </html>
